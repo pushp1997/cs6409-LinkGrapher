@@ -23,6 +23,11 @@ Feel free to fork and customize this project to suit your needs.
     ```
 
     Wait for the spider to crawl all the pages and create the corresponding graph in the database.
+    When the scraper completes the task you should see output as below:
+
+    ![Screenshot of output](Output-Screenshot.png)
+
+    Here we can see the page rank for each page.
 
 2. Check the graph created
 
