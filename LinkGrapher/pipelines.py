@@ -1,12 +1,6 @@
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-
-
-# useful for handling different item types with a single interface
 from os import getenv
 from neo4j import GraphDatabase
+import networkx as nx
 
 
 class Neo4jPipeline:
@@ -24,12 +18,14 @@ class Neo4jPipeline:
         )
 
     def close_spider(self, spider):
+        G = self.create_networkx_graph()
+        page_ranks = nx.pagerank(G)
+        for url, rank in page_ranks.items():
+            print(f"URL: {url} - PageRank: {rank:.4f}")
         self.driver.close()
 
     def process_item(self, item, spider):
         with self.driver.session() as session:
-            # Handle the case when item is None, i.e., when the current
-            # link has already been crawled.
             if item:
                 session.execute_write(self._create_node, item["url"])
                 for link in item["links"]:
@@ -52,3 +48,16 @@ class Neo4jPipeline:
             source_url=source_url,
             target_url=target_url,
         )
+
+    def create_networkx_graph(self):
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (source:Page)-[:LINKS_TO]->(target:Page)
+                RETURN source.url as source_url, target.url as target_url
+            """
+            )
+            G = nx.DiGraph()
+            for record in result:
+                G.add_edge(record["source_url"], record["target_url"])
+        return G
